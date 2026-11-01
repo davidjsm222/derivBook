@@ -7,7 +7,7 @@ from market import Market
 from derivatives import Derivative, Option, PutOption, CallOption, Future
 from pricing import bs_delta, bs_gamma, bs_vega
 
-def delta(derivative: Derivative, market: Market, pct=0.01):
+def delta(derivative: Derivative, market: Market, pct=0.001):
     if pct <= 0:
         raise ValueError(f"pct must be positive, got {pct}")
 
@@ -28,7 +28,7 @@ def delta(derivative: Derivative, market: Market, pct=0.01):
     delta = (price_plus - price_minus) / (2*bump_size)
     return delta
 
-def gamma(derivative: Derivative, market: Market, pct=0.01):
+def gamma(derivative: Derivative, market: Market, pct=0.001):
     if pct <= 0:
         raise ValueError(f"pct must be positive, got {pct}")
 
