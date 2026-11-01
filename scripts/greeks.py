@@ -4,7 +4,7 @@
 #   David Smith
 
 from market import Market
-from derivatives import Derivative, Option, PutOption, CallOption, Future
+from derivatives import Derivative, Future
 from pricing import bs_delta, bs_gamma, bs_vega
 
 def delta(derivative: Derivative, market: Market, pct=0.001):
