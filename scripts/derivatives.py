@@ -11,7 +11,7 @@ from abc import ABC, abstractmethod
 import numpy as np
 
 from market import Market
-from trees import binomial_price
+from trees import binomial_price, convertible_price
 from pricing import bs_call, bs_put, future_price
 
 #Base class, every derivative stems from this
@@ -39,13 +39,13 @@ class Option(Derivative):
         self.strike = strike
 
     def _get_inputs(self, market):
-        S = market.spot(self.underlying)
-        K = self.strike
-        T = self.time_to_expiry(market)
-        r = market.rate
-        q = market.div_yield(self.underlying)
-        sigma = market.vol(self.underlying)
-        return S, K, T, r, q, sigma
+            S = market.spot(self.underlying)
+            K = self.strike
+            T = self.time_to_expiry(market)
+            r = market.rate
+            q = market.div_yield(self.underlying)
+            sigma = market.vol(self.underlying)
+            return S, K, T, r, q, sigma
 
 class EuropeanCallOption(Option):
 
@@ -109,10 +109,31 @@ class Future(Derivative):
     def price(self, market):
         return future_price(market.spot(self.underlying), self.time_to_expiry(market), market.rate, market.div_yield(self.underlying))
 
+class Convertible(Derivative):
+    conversion_ratio: float
+    face: float
+    steps: int
+
+    def __init__(self, underlying, expiry, conversion_ratio, face, steps=500):
+        super().__init__(underlying, expiry)
+        self.conversion_ratio, self.face, self.steps = conversion_ratio, face, steps
+
+    def price(self, market: Market):
+        
+        S = market.spot(self.underlying)
+        T = self.time_to_expiry(market)
+        if T <= 0:
+            return max(self.face, self.conversion_ratio * S)
+        r = market.rate
+        q = market.div_yield(self.underlying)
+        sigma = market.vol(self.underlying)
+        credit_spread = market.credit_spread(self.underlying)
+        return convertible_price(S, T, r, q, sigma, credit_spread, self.face, self.conversion_ratio, self.steps)
+
 if __name__ == "__main__":
 
     # Need import line here to avoid circular imports
-    from greeks import delta, gamma
+    from greeks import delta, gamma, vega, rho
 
     # local test block
 
@@ -181,3 +202,20 @@ if __name__ == "__main__":
     # 8. Greeks on an instrument with no Greek formulas
     print("amer put delta:", delta(amer_put, base))        # between -1 and 0
     print("amer put gamma:", gamma(amer_put, base))        # may look jumpy
+
+        # 9. convertible through the class
+    cb = Convertible("XYZ", 5, 20, 1000)
+    print("cb price:", cb.price(base))                     # same as check 10 in trees.py
+
+    # 10. Greeks: all four drivers
+    print("cb delta:", delta(cb, base))                    # between 0 and 20
+    print("cb vega: ", vega(cb, base))                     # positive
+    print("cb rho:  ", rho(cb, base))                      # negative
+
+    # 11. credit: the sensitivity nothing else in the book has
+    wider = base.bump("credit_spreads", 0.01, key="XYZ")
+    print("cb, spread +1%:", cb.price(base), "->", cb.price(wider))   # falls
+
+    # 12. at maturity: larger of face and conversion value
+    matured = base.bump("time", 5)
+    print("cb at maturity:", cb.price(matured))            # 1000 (face beats 20 x 42 = 840)

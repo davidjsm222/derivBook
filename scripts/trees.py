@@ -30,7 +30,7 @@ def _terminal_spots(S, u, d, N):
 def binomial_price(S, K, T, r, q, sigma, N, option_type, american=False):
 
     # Get tree parameters
-    dt, u, d, p, discount = _tree_params(T, r, q, sigma, N)
+    _, u, d, p, discount = _tree_params(T, r, q, sigma, N)
 
     # Check option type (call or put) and get payoffs
     tspots = _terminal_spots(S, u, d, N)
@@ -55,6 +55,36 @@ def binomial_price(S, K, T, r, q, sigma, N, option_type, american=False):
             values = np.maximum(values, temp_spots)
 
     return values[0]
+
+def convertible_price(S, T, r, q, sigma, credit_spread, face, conv_ratio, N):
+
+    # Get tree params
+    dt, u, d, p, discount = _tree_params(T, r, q, sigma, N)
+
+    # Get debt discount
+    debt_discount = np.exp(-(r + credit_spread) * dt)
+
+    # Get terminal spots
+    tspots = _terminal_spots(S, u, d, N)
+    conv_value = tspots * conv_ratio
+
+    # Get true/false for whether convert or not 
+    converts = conv_value > face
+    E = np.where(conv_value > face, conv_value, 0)
+    B = np.where(converts, 0, face)
+
+    # Now, walk backwards through tree and discount
+    for i in range(N-1, -1, -1):
+        E = discount * (p * E[1:] + (1-p) * E[:-1])
+        B = debt_discount * (p * B[1:] + (1-p) * B[:-1])
+
+        temp_spots = _terminal_spots(S, u, d, i)
+        temp_conv_value = conv_ratio * temp_spots
+        temp_converts = temp_conv_value > (E+B)
+        E = np.where(temp_converts, temp_conv_value, E)
+        B = np.where(temp_converts, 0, B)
+
+    return E[0] + B[0]
 
 if __name__ == "__main__":
     S, K, T, r, q, sigma = 100, 100, 1, 0.05, 0, 0.20
@@ -101,3 +131,21 @@ if __name__ == "__main__":
         print("option type guard FAILED")
     except ValueError:
         print("option type guard works")
+
+        # convertible: XYZ at 42, 5 years, face 1000, 20 shares, 2.5% credit spread
+    S, T, r, q, sigma, cs = 42, 5, 0.04, 0, 0.35, 0.025
+
+    # 7. huge conversion ratio: always converts, worth the shares
+    print("cb, 1000 shares:", convertible_price(S, T, r, q, sigma, cs, 1000, 1000, 500))  # ~42000
+
+    # 8. zero conversion ratio: never converts, worth the bond floor
+    print("cb, 0 shares:", convertible_price(S, T, r, q, sigma, cs, 1000, 0, 500))
+    print("bond floor:  ", 1000 * np.exp(-(r + cs) * T))                                  # 722.53, should match
+
+    # 9. no credit risk: risk-free bond plus 20 calls struck at 50
+    print("cb, no credit:", convertible_price(S, T, r, q, sigma, 0, 1000, 20, 500))
+    print("bond + calls: ", 1000 * np.exp(-r * T) + 20 * bs_call(S, 50, T, r, q, sigma))   # ~1082.0
+
+    # 10. normal terms: above bond floor and conversion value
+    cb = convertible_price(S, T, r, q, sigma, cs, 1000, 20, 500)
+    print("cb:", cb, "| bond floor: 722.53 | conversion value: 840")
