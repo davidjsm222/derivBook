@@ -53,6 +53,16 @@ class Market:
         if key not in self.credit_spreads:
             raise KeyError(f"no spot for {key}")
         return self.credit_spreads[key]
+
+    def bump_pct(self, field: str, pct: float, key: str = None):
+        if key is None:
+            val = getattr(self, field)
+            return replace(self, **{field: val+val*pct})
+        else:
+            old_dict = getattr(self, field)
+            val = old_dict[key]
+            new_dict = {**old_dict, key: val+val*pct}
+            return replace(self, **{field: new_dict})
     
 if __name__ == "__main__":
 

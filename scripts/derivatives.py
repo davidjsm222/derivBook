@@ -12,7 +12,7 @@ import numpy as np
 
 from market import Market
 from trees import binomial_price, convertible_price
-from pricing import bs_call, bs_put, future_price
+from pricing import bs_call, bs_put, future_price, rates_future_price
 
 #Base class, every derivative stems from this
 class Derivative(ABC):
@@ -108,6 +108,16 @@ class Future(Derivative):
 
     def price(self, market):
         return future_price(market.spot(self.underlying), self.time_to_expiry(market), market.rate, market.div_yield(self.underlying))
+
+class RatesFuture(Derivative):
+    tau: float
+
+    def __init__(self, underlying, expiry, tau=0.25):
+        super().__init__(underlying, expiry)
+        self.tau = tau
+
+    def price(self, market):
+        return rates_future_price(market.rate, self.tau)
 
 class Convertible(Derivative):
     conversion_ratio: float
@@ -219,3 +229,30 @@ if __name__ == "__main__":
     # 12. at maturity: larger of face and conversion value
     matured = base.bump("time", 5)
     print("cb at maturity:", cb.price(matured))            # 1000 (face beats 20 x 42 = 840)
+
+        # 13. rates future: 4% rate, standard 3-month window
+    rf = RatesFuture("SOFR", 0.25)
+    print("rates future:", rf.price(base))                 # ~95.9799
+    print("no conversion:", 100 - 100 * 0.04)              # 96.00, the gap is the compounding
+
+    # 14. rho: about -101 per 1.00 of rate, so about -0.01 per basis point
+    print("rf rho:", rho(rf, base))                        # ~-101.0
+
+    # 15. rates up 25 basis points: price falls about a quarter point
+    rates_up = base.bump("rate", 0.0025)
+    print("rf, rates +25bp:", rf.price(base), "->", rf.price(rates_up))   # ~95.98 -> ~95.73
+
+    # 16. SPX vol shock: no effect
+    vol_up = base.bump("vols", 0.05, key="SPX")
+    print("rf, SPX vol +5:", rf.price(base), "->", rf.price(vol_up))      # identical
+
+    # 17. flat rate limitation: expiry doesn't change the price
+    rf_long = RatesFuture("SOFR", 3.0)
+    print("3-month vs 3-year expiry:", rf.price(base), rf_long.price(base))  # identical
+
+    # 18. no spot for SOFR, so delta should raise
+    try:
+        delta(rf, base)
+        print("rf delta FAILED, returned a number")
+    except KeyError:
+        print("rf delta correctly has no spot")

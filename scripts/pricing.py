@@ -22,6 +22,10 @@ def future_price(S, T, r, q):
     price = S * np.exp((r-q) * T)
     return price
 
+def rates_future_price(r, tau=0.25):
+    price = 100 - 100 * (np.exp(r * tau) - 1) / tau
+    return price
+
 # Black-Scholes Functions
 
 def bs_call(S, K, T, r, q, sigma):
