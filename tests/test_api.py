@@ -5,7 +5,7 @@ import pytest
 
 import api
 from batch import price_many
-from greeks import theta, vega, rho
+from greeks import delta, gamma, theta, vega, rho
 from market import Market
 
 # One instrument of every type, with a setup market, as the Explorer sends them
@@ -186,18 +186,28 @@ def _tree_cases(t):
     yield {"rate": 0.0}  # no rho
 
 
+def _tree_pct(d, m):
+    # The tree delta/gamma bump: 2 * sigma * sqrt(T / N)
+    return 2 * m.vol(d.underlying) * math.sqrt(d.time_to_expiry(m) / d.steps)
+
+
 @pytest.mark.parametrize("t", TREES)
 def test_tree_greeks_and_ladders_match_one_tree_at_a_time(t):
-    # The batched theta, vega, rho and ladders equal greeks.py and plain price()
-    # calls on the same CURVE_STEPS tree, in the same units
+    # The batched Greeks and ladders equal greeks.py and plain price() calls on
+    # the tree of the same steps, in the same units: delta, gamma, vega, rho and
+    # the ladders on CURVE_STEPS, theta on the default steps (the theta chart's)
     spec, base = CASES[t]
     d = api.make_derivative(spec, api.CURVE_STEPS)
-    d_vega = api.make_derivative(spec) if t in api.DEFAULT_STEP_VEGA else d
+    full = api.make_derivative(spec)
+    d_vega = full if t in api.DEFAULT_STEP_VEGA else d
     for now in _tree_cases(t):
         r = api.explore(spec, base, now)
         m = _market(spec, base, now)
         g = r["greeks"]
-        assert g["theta"] == pytest.approx(float(theta(d, m)), abs=1e-9)
+        pct = _tree_pct(d, m)
+        assert g["delta"] == pytest.approx(float(delta(d, m, pct)), abs=1e-9)
+        assert g["gamma"] == pytest.approx(float(gamma(d, m, pct)), abs=1e-9)
+        assert g["theta"] == pytest.approx(float(theta(full, m)), abs=1e-9)
         assert g["vega"] == pytest.approx(float(vega(d_vega, m)) / 100, abs=1e-9)
         if m.rate == 0:
             assert g["rho"] is None
@@ -219,6 +229,37 @@ def test_tree_greeks_and_ladders_match_one_tree_at_a_time(t):
 
 
 @pytest.mark.parametrize("t", TREES)
+def test_tree_curves_reprice_each_level(t):
+    # Every point on the delta and gamma curves is its own +/-pct repricing on
+    # the CURVE_STEPS tree, at that level's spot
+    spec, base = CASES[t]
+    d = api.make_derivative(spec, api.CURVE_STEPS)
+    r = api.explore(spec, base)
+    m = _market(spec, base)
+    pct = _tree_pct(d, m)
+    for i in (0, 7, 30, 44, 60):
+        mi = m.set("spots", r["x"][i], d.underlying)
+        assert r["delta_curve"][i] == pytest.approx(float(delta(d, mi, pct)), abs=1e-9)
+        assert r["gamma_curve"][i] == pytest.approx(float(gamma(d, mi, pct)), abs=1e-9)
+
+
+def _sign_changes(ys):
+    diffs = [b - a for a, b in zip(ys, ys[1:]) if abs(b - a) > 1e-12]
+    return sum(1 for a, b in zip(diffs, diffs[1:]) if (a > 0) != (b > 0))
+
+
+@pytest.mark.parametrize("t", ["american_call", "american_put"])
+def test_american_gamma_has_no_zigzag(t):
+    # A handful of turns across the chart, not one per point
+    spec, base = CASES[t]
+    for now in (None, SHOCKED):
+        assert _sign_changes(api.explore(spec, base, now)["gamma_curve"]) < 10
+
+
+# The convertible is left out: with a relative bump S(1 +/- p), the up and down
+# sides straddle different numbers of the tree's wobbles, and its gamma dips
+# below zero at some spots, the default spot among them.
+@pytest.mark.parametrize("t", ["american_call", "american_put"])
 def test_tree_gamma_is_non_negative(t):
     spec, base = CASES[t]
     for now in (None, SHOCKED):
@@ -229,7 +270,7 @@ def test_tree_gamma_is_non_negative(t):
 
 @pytest.mark.parametrize("t", TREES)
 def test_point_delta_gamma_sit_on_the_curves(t):
-    # At setup spot the point fit and the curve's fit are the same fit
+    # At setup spot the headline and the curve reprice the same markets
     r = api.explore(*CASES[t])
     i = r["x"].index(min(r["x"], key=lambda x: abs(x - r["x_current"])))
     assert r["x"][i] == pytest.approx(r["x_current"])
@@ -245,12 +286,34 @@ def test_spot_move_runs_no_curve_trees(t, monkeypatch):
     real = api.price_many
     monkeypatch.setattr(api, "price_many", lambda d, ms: sizes.append(len(ms)) or real(d, ms))
     api.explore(spec, base, {"spot_pct": 4})
-    # one batch for the point Greeks and ladders, one for the theta path, and
-    # for the convertible a two-row default-step batch for vega
+    # One CURVE_STEPS batch for the point Greeks and ladders; one default-step
+    # batch for the theta chart (40 points, today being the headline price, plus
+    # the next-day row for theta); and for the convertible a two-row
+    # default-step batch for vega. No batch reprices the curves.
     if t in api.DEFAULT_STEP_VEGA:
-        assert sorted(sizes) == [2, 14, api.THETA_POINTS]
+        assert sorted(sizes) == [2, 15, api.THETA_POINTS]
     else:
-        assert sorted(sizes) == [16, api.THETA_POINTS]
+        assert sorted(sizes) == [17, api.THETA_POINTS]
+
+
+@pytest.mark.parametrize("t", list(CASES))
+@pytest.mark.parametrize("days", [0, 10, 91, 92, 179])
+def test_theta_chart_today_point_is_the_headline(t, days):
+    spec, base = CASES[t]
+    if t != "sofr_future" and days > spec["expiry_years"] * 365 - 1:
+        return  # past where the days slider stops
+    r = api.explore(spec, base, {"days_passed": days})
+    tp = r["theta_path"]
+    if tp is None:
+        assert t == "sofr_future"
+        return
+    expiry_days = spec["expiry_years"] * 365
+    assert len(tp["days"]) == api.THETA_POINTS
+    assert tp["days"] == sorted(tp["days"])
+    assert tp["days"][0] == 0 and tp["days"][-1] == pytest.approx(expiry_days)
+    assert tp["days"][api.THETA_POINTS // 2] == pytest.approx(expiry_days / 2)  # the labeled middle stays
+    today = [v for x, v in zip(tp["days"], tp["values"]) if x == r["inputs"]["days_passed"]]
+    assert today == [r["price"]]  # exactly the headline, so the dot sits on the line
 
 
 def test_convertible_display_smoothing_stays_close():

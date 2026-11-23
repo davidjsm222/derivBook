@@ -31,12 +31,13 @@ from derivatives import (
     Convertible,
 )
 from greeks import delta, gamma, vega, rho, theta
-from batch import price_many, fitted_delta_gamma
+from batch import price_many
 
-# Binomial steps for everything on the tree instruments (American options,
-# convertible) except the headline price, base_price, the bond floor and the
-# convertible's vega (see DEFAULT_STEP_VEGA), which use each instrument's own
-# default steps from derivatives.py.
+# Binomial steps for the tree instruments' (American options, convertible)
+# value curves, delta and gamma (curves and headline), vega and rho, and
+# ladders. The headline price, base_price, the bond floor, the convertible's
+# vega (see DEFAULT_STEP_VEGA), and the theta chart with the headline theta use
+# each instrument's own default steps from derivatives.py.
 CURVE_STEPS = 80
 
 # Instrument types the site can build, the engine class behind each, what kind
@@ -63,9 +64,14 @@ APPLIES = {
 SOFR_UNDERLYING = "SOFR"
 SOFR_EXPIRY = 0.25                                 # RatesFuture needs an expiry; its price doesn't read it
 
-# Tree instruments: delta and gamma come from a quadratic fitted through the
-# "now" curve within this distance of each spot, as a share of setup spot.
-FIT_WINDOW = {"american_call": 0.04, "american_put": 0.04, "convertible": 0.25}
+# Tree instruments: delta and gamma reprice spot at +/-pct, with
+#   pct = TREE_BUMP_NODES * sigma * sqrt(T / N)
+# where sigma is the underlying's vol in the market being priced, T the
+# instrument's years to expiry and N the tree steps of that calculation. One
+# up-move of the tree is exp(sigma * sqrt(T / N)), so the bump spans two node
+# spacings and straddles a whole wobble of the tree's price instead of landing
+# inside one. The same formula as greeks.delta and greeks.gamma, with this pct.
+TREE_BUMP_NODES = 2
 SMOOTH_POINTS = 3                                  # convertible display curves: fit over +/-3 grid points
 VEGA_BUMP_PCT = 0.01                               # greeks.vega's default bump: 1% of vol
 RHO_BUMP_PCT = 0.01                                # greeks.rho's default bump: 1% of the rate
@@ -264,17 +270,13 @@ class _Setup:
         self.h = (hi - lo) / (GRID_POINTS - 1)
         self.xs = [lo + i * self.h for i in range(GRID_POINTS)]
 
-    def fit_window(self):
-        # The fit window in spot units: a share of setup spot
-        return FIT_WINDOW[self.type] * self.market.spot(self.und)
-
     def pad(self):
         # Extra grid levels on each side of the chart range. Black-Scholes and the
-        # future need one, for central differences. The trees need enough for the
-        # fit window (and the display smoothing) to sit inside the grid at the edges.
+        # future need one, for central differences. The convertible needs enough
+        # for its display smoothing; the American options need none.
         if not self.tree:
             return 1
-        return max(SMOOTH_POINTS, math.ceil(self.fit_window() / self.h - 1e-9))
+        return SMOOTH_POINTS if self.kind == "convertible" else 0
 
     def now(self, now):
         # The setup market with the slider state applied. Inputs this kind
@@ -293,6 +295,16 @@ class _Setup:
         if "credit_spread" in self.applies and now.get("credit_spread") is not None:
             m = m.set("credit_spreads", now["credit_spread"], u)
         return m
+
+
+def _tree_bump(sigma, t_left, steps):
+    # The relative spot bump for tree delta and gamma (see TREE_BUMP_NODES).
+    # None when it can't be taken: no time or no vol left, or a bump of 100% or
+    # more, which would push spot to zero or below.
+    if t_left <= 0 or sigma <= 0:
+        return None
+    pct = TREE_BUMP_NODES * sigma * math.sqrt(t_left / steps)
+    return pct if pct < 1 else None
 
 
 def _base_price(s):
@@ -336,12 +348,20 @@ def _curves(s, market):
     now_raw = along(market)
 
     if s.tree:
-        # Delta and gamma at each level from a quadratic fitted through the
-        # nearby tree prices, which averages out the tree's wobble.
-        w = s.fit_window()
-        fits = [fitted_delta_gamma(padded, now_raw, x, w) for x in xs]
-        delta_curve = [f[0] for f in fits]
-        gamma_curve = [f[1] for f in fits]
+        # Delta and gamma at each level: reprice that level at +/-pct, in one
+        # batch of CURVE_STEPS trees, against the level's own price on the
+        # "now" curve (same market, same steps).
+        pct = _tree_bump(market.vol(und), t_left, CURVE_STEPS)
+        if pct is None:
+            delta_curve = gamma_curve = None
+        else:
+            ups = [market.set("spots", x * (1 + pct), und) for x in xs]
+            downs = [market.set("spots", x * (1 - pct), und) for x in xs]
+            bumped = _many(dc, ups + downs)
+            pu, pd = bumped[:GRID_POINTS], bumped[GRID_POINTS:]
+            center = now_raw[inner]
+            delta_curve = [(u - d) / (2 * x * pct) for u, d, x in zip(pu, pd, xs)]
+            gamma_curve = [(u - 2 * c + d) / (x * pct) ** 2 for u, c, d, x in zip(pu, center, pd, xs)]
     else:
         pv = now_raw
         delta_curve = [(pv[i + 1] - pv[i - 1]) / (2 * h) for i in range(pad, pad + GRID_POINTS)]
@@ -361,7 +381,7 @@ def _curves(s, market):
     # The convertible's tree curves wobble as conversion points cross the
     # nodes. For display, each point is replaced by the value of a quadratic
     # fitted over it and the 3 grid points on either side. The delta and
-    # gamma above are fitted to the raw prices, not these smoothed ones.
+    # gamma above use the raw tree prices, not these smoothed ones.
     def display(ys):
         if ys is None:
             return None
@@ -379,7 +399,7 @@ def _curves(s, market):
         "now": display(now_raw), "half": display(half_raw), "fifteen": display(fifteen_raw), "expiry": expiry,
         "delta": delta_curve, "gamma": gamma_curve,
         "bond_floor": bond_floor,
-        "padded": padded, "now_raw": now_raw,  # kept for the point delta and gamma fit
+        "padded": padded, "now_raw": now_raw,
     }
     return _remember(_CURVE_CACHE, _CURVE_CACHE_SIZE, key, out)
 
@@ -407,12 +427,12 @@ def _breakdown(s, market, price, bond_floor):
 
 
 def _tree_point(s, market, cv):
-    # Point Greeks, both ladders and the two earlier-in-life dots for a tree
-    # instrument. Delta and gamma come from the quadratic fit on the cached "now"
-    # curve, so a spot move runs no trees for them. Everything else is one batch
+    # Point Greeks (except theta, which comes with the theta chart), both
+    # ladders and the two earlier-in-life dots for a tree instrument. One batch
     # of CURVE_STEPS trees, one row per bumped market, using greeks.py's own
-    # bumps and the same units as _point_greeks:
-    #   theta = V(t + 1/365) - V(t), per day
+    # formulas and the same units as _point_greeks:
+    #   delta = (V(S(1+p)) - V(S(1-p))) / 2Sp, gamma = (V(S(1+p)) - 2V(S) + V(S(1-p))) / (Sp)^2
+    #           with p from _tree_bump, the same as each point of the delta and gamma curves
     #   vega  = (V(vol + h) - V(vol - h)) / 2h with h = 1% of vol, / 100 for per point
     #   rho   = (V(r + h) - V(r - h)) / 2h with h = 1% of the rate, / 10,000 for per bp
     # The exception is vega for DEFAULT_STEP_VEGA types: the same two rows, in a
@@ -421,7 +441,6 @@ def _tree_point(s, market, cv):
     dc = s.curve
     und = s.und
     spot = market.spot(und)
-    d_fit, g_fit = fitted_delta_gamma(cv["padded"], cv["now_raw"], spot, s.fit_window())
 
     sigma = market.vol(und)
     r = market.rate
@@ -433,6 +452,7 @@ def _tree_point(s, market, cv):
     vega_on_default_steps = s.type in DEFAULT_STEP_VEGA
     t_left = dc.time_to_expiry(market)
     strata = cv["half"] is not None
+    pct = _tree_bump(sigma, t_left, CURVE_STEPS)
 
     rows, at = [], {}
 
@@ -441,7 +461,8 @@ def _tree_point(s, market, cv):
         rows.extend(markets)
 
     add("ref", [market])
-    add("theta", [market.bump("time", 1 / DAYS_PER_YEAR)])
+    if pct is not None:
+        add("spot", [market.set("spots", spot * (1 + pct), und), market.set("spots", spot * (1 - pct), und)])
     if vega_h != 0 and not vega_on_default_steps:
         add("vega", vega_pair)
     add("rho", [market.bump("rate", -rho_h), market.bump("rate", rho_h)])
@@ -469,11 +490,17 @@ def _tree_point(s, market, cv):
     rho_val = None
     if rho_h != 0 and rho_m is not None and rho_p is not None:
         rho_val = (rho_p - rho_m) / (2 * rho_h) / 10_000
+    d_val = g_val = None
+    if pct is not None:
+        pu, pd = p[at["spot"]]
+        if pu is not None and pd is not None:
+            b = spot * pct
+            d_val = (pu - pd) / (2 * b)
+            g_val = (pu - 2 * ref + pd) / (b * b)
     return {
         "greeks": {
-            "delta": d_fit,
-            "gamma": g_fit,
-            "theta": diff(p[at["theta"]][0], ref),
+            "delta": d_val,
+            "gamma": g_val,
             "vega": vega,
             "rho": rho_val,
         },
@@ -509,17 +536,44 @@ def _point_greeks(s, market):
     }
 
 
-def _theta_path(s, market):
+def _path_times(expiry, t_now):
+    # THETA_POINTS times from day 0 to expiry, with today's time in place of the
+    # nearest one so the chart's today dot is a point on its line. Both ends
+    # (day 0 and expiry) and the middle point, which the chart labels, stay put;
+    # the count doesn't change.
+    n = THETA_POINTS - 1
+    times = [expiry * i / n for i in range(n + 1)]
+    if t_now <= 0 or t_now >= expiry or t_now in times:
+        return times
+    i = min(max(round(t_now / expiry * n), 1), n - 1)
+    mid = n // 2
+    if i == mid:
+        i = mid + 1 if t_now > times[mid] else mid - 1
+    times[i] = t_now
+    return times
+
+
+def _theta_path(s, market, price):
     # Value at the current spot (and every other current input) from day 0 to
-    # expiry, with only time moving.
+    # expiry, with only time moving. Today's point is the headline price itself.
+    # For the trees every other point is priced on the same default-step tree as
+    # the headline, in one batch that also holds the row for the headline theta,
+    # V(t + 1/365) - V(t). Returns (path, tree theta or None).
     if "time" not in s.applies:
-        return None
-    dc = s.curve
-    times = [dc.expiry * i / (THETA_POINTS - 1) for i in range(THETA_POINTS)]
-    return {
-        "days": [t * DAYS_PER_YEAR for t in times],
-        "values": _many_or_none(dc, [market.set("time", t) for t in times]),  # one batch for the trees
-    }
+        return None, None
+    d = s.full if s.tree else s.curve
+    t_now = market.time
+    times = _path_times(d.expiry, t_now)
+    rows = [market.set("time", t) for t in times if t != t_now]
+    if s.tree:
+        rows.append(market.bump("time", 1 / DAYS_PER_YEAR))
+    priced = iter(_many_or_none(d, rows))
+    values = [price if t == t_now else next(priced) for t in times]
+    tree_theta = None
+    if s.tree:
+        next_day = next(priced)
+        tree_theta = None if next_day is None else next_day - price
+    return {"days": [t * DAYS_PER_YEAR for t in times], "values": values}, tree_theta
 
 
 def _ladder(s, market, field, shifts):
@@ -560,9 +614,10 @@ def explore(spec, base, now=None):
       at_current     the same four at x_current
       time_left      years left for now, half and fifteen
       delta_curve, gamma_curve   on x: central differences on curves.now, or for
-                                 the trees a quadratic fit (None for SOFR)
+                                 the trees each level repriced at +/-pct (None for SOFR)
       greeks         delta, gamma, theta per day, vega per vol point, rho per bp
-      theta_path     {days, values}: value at this spot from day 0 to expiry
+      theta_path     {days, values}: value at this spot from day 0 to expiry,
+                     with today as one of its points
       vega_ladder, rho_ladder    [{shift, change}] against price
     """
     s = _Setup(spec, base)
@@ -601,8 +656,12 @@ def explore(spec, base, now=None):
             "fifteen": FIFTEEN_TIME * t_left if strata else None,
         }
 
+    theta_path, tree_theta = _theta_path(s, market, price)
+
     if tp:
-        greeks, vega_ladder, rho_ladder = tp["greeks"], tp["vega_ladder"], tp["rho_ladder"]
+        g = tp["greeks"]
+        greeks = {"delta": g["delta"], "gamma": g["gamma"], "theta": tree_theta, "vega": g["vega"], "rho": g["rho"]}
+        vega_ladder, rho_ladder = tp["vega_ladder"], tp["rho_ladder"]
     else:
         greeks = _point_greeks(s, market)
         vega_ladder = _ladder(s, market, "vols", VOL_LADDER) if und in market.vols else None
@@ -632,7 +691,7 @@ def explore(spec, base, now=None):
         "delta_curve": cv["delta"],
         "gamma_curve": cv["gamma"],
         "greeks": greeks,
-        "theta_path": _theta_path(s, market),
+        "theta_path": theta_path,
         "vega_ladder": vega_ladder,
         "rho_ladder": rho_ladder,
     }
