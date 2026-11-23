@@ -1,0 +1,19 @@
+{
+  "pyodide": "314.0.7",
+  "expectedBytes": 29300000,
+  "bookExpectedBytes": 4930000,
+  "entry": "api",
+  "files": [
+    "market.py",
+    "pricing.py",
+    "trees.py",
+    "derivatives.py",
+    "greeks.py",
+    "book.py",
+    "batch.py",
+    "api.py"
+  ],
+  "bookFiles": [
+    "shock.py"
+  ]
+}

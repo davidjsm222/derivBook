@@ -1,0 +1,548 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>derivBook Exposure Map</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600&amp;family=Instrument+Serif&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#050608}
+[data-palette], [data-palette="horizon"]{--bg:#050608;--fg:255, 255, 255;--hi:#FFFFFF;--ink:#F3F4F8;--ink-2:#C7CCD6;--ink-3:#A6ADBA;--ink-4:#8A92A2;--ink-5:#737B8B;--ink-6:#4E5563;--loss:#FF8040;--loss-rgb:255, 128, 64;--loss-ink:#FF9A66;--gain:#5096FF;--gain-rgb:80, 150, 255;--gain-ink:#79AEFF;--acc:#E270FF;--acc-rgb:226, 112, 255;--acc-ink:#F0C8FF;--wash-a:226, 112, 255;--wash-b:255, 128, 64;--wash:0.1;--grain:0.05;--bloom:0.55;--glow:0.55;--tint-max:0.56;--cell-ink:#FFFFFF;--brand-a:#FF8040;--brand-b:#E270FF;--brand-c:#5096FF;--brand-a-rgb:255, 128, 64;--brand-b-rgb:226, 112, 255;--brand-c-rgb:80, 150, 255;--card:linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.016));--card-sel:linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.03));--line:rgba(255, 255, 255, 0.08);--hl:rgba(255, 255, 255, 0.07);color-scheme:dark}
+[data-palette="dusk"]{--bg:#080B12;--fg:255, 255, 255;--hi:#F6F7FA;--ink:#F3F4F8;--ink-2:#D6DAE3;--ink-3:#A9B0C0;--ink-4:#8890A3;--ink-5:#737C90;--ink-6:#4A5263;--loss:#EE6650;--loss-rgb:238, 102, 80;--loss-ink:#F59484;--gain:#4FD1C5;--gain-rgb:79, 209, 197;--gain-ink:#86E3D9;--acc:#9B8CFF;--acc-rgb:155, 140, 255;--acc-ink:#C9C2FF;--wash-a:155, 140, 255;--wash-b:242, 153, 94;--wash:0.14;--grain:0.05;--bloom:0.55;--glow:0.5;--tint-max:0.56;--cell-ink:#FFFFFF;--brand-a:#F2995E;--brand-b:#9B8CFF;--brand-c:#6FB4FF;--brand-a-rgb:242, 153, 94;--brand-b-rgb:155, 140, 255;--brand-c-rgb:111, 180, 255;--card:linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.016));--card-sel:linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.03));--line:rgba(255, 255, 255, 0.08);--hl:rgba(255, 255, 255, 0.07);color-scheme:dark}
+[data-palette="coral"]{--bg:#040506;--fg:255, 255, 255;--hi:#FFFFFF;--ink:#E6E6E6;--ink-2:#CDCDCE;--ink-3:#9C9C9D;--ink-4:#8A8B8E;--ink-5:#7A7B7D;--ink-6:#454647;--loss:#FF6363;--loss-rgb:255, 99, 99;--loss-ink:#FF8A8A;--gain:#63A1FF;--gain-rgb:99, 161, 255;--gain-ink:#8DBBFF;--acc:#59D499;--acc-rgb:89, 212, 153;--acc-ink:#8FE3BB;--wash-a:255, 99, 99;--wash-b:20, 60, 163;--wash:0.1;--grain:0.04;--bloom:0.45;--glow:0.5;--tint-max:0.56;--cell-ink:#FFFFFF;--brand-a:#FF6363;--brand-b:#59D499;--brand-c:#63A1FF;--brand-a-rgb:255, 99, 99;--brand-b-rgb:89, 212, 153;--brand-c-rgb:99, 161, 255;--card:linear-gradient(180deg, #0C0D0F, #07080A);--card-sel:linear-gradient(180deg, #16171A, #111214);--line:#202124;--hl:rgba(255, 255, 255, 0.05);color-scheme:dark}
+[data-palette="moss"]{--bg:#163300;--fg:226, 246, 213;--hi:#FFFFFF;--ink:#E2F6D5;--ink-2:#CBE3BD;--ink-3:#AFC8A0;--ink-4:#9AB58B;--ink-5:#7F9A71;--ink-6:#587048;--loss:#E0464E;--loss-rgb:224, 70, 78;--loss-ink:#FF9A92;--gain:#9FE870;--gain-rgb:159, 232, 112;--gain-ink:#B9F294;--acc:#5AB0E0;--acc-rgb:90, 176, 224;--acc-ink:#9ACFEE;--wash-a:159, 232, 112;--wash-b:5, 77, 40;--wash:0.1;--grain:0.05;--bloom:0.4;--glow:0.45;--tint-max:0.42;--cell-ink:#FFFFFF;--brand-a:#E0464E;--brand-b:#5AB0E0;--brand-c:#9FE870;--brand-a-rgb:224, 70, 78;--brand-b-rgb:90, 176, 224;--brand-c-rgb:159, 232, 112;--card:linear-gradient(180deg, rgba(5, 77, 40, 0.62), rgba(5, 77, 40, 0.36));--card-sel:linear-gradient(180deg, rgba(5, 77, 40, 0.9), rgba(5, 77, 40, 0.6));--line:rgba(226, 246, 213, 0.12);--hl:rgba(226, 246, 213, 0.08);color-scheme:dark}
+[data-palette="iris"]{--bg:#000000;--fg:255, 255, 255;--hi:#FFFFFF;--ink:#F2F2F2;--ink-2:#DADADA;--ink-3:#BDBDBD;--ink-4:#9A9A9A;--ink-5:#7E7E7E;--ink-6:#4A4A4A;--loss:#FFB829;--loss-rgb:255, 184, 41;--loss-ink:#FFC95C;--gain:#8052FF;--gain-rgb:128, 82, 255;--gain-ink:#AB8EFF;--acc:#15846E;--acc-rgb:21, 132, 110;--acc-ink:#4FC2A8;--wash-a:128, 82, 255;--wash-b:255, 184, 41;--wash:0.12;--grain:0.05;--bloom:0.5;--glow:0.5;--tint-max:0.56;--cell-ink:#FFFFFF;--brand-a:#FFB829;--brand-b:#15846E;--brand-c:#8052FF;--brand-a-rgb:255, 184, 41;--brand-b-rgb:21, 132, 110;--brand-c-rgb:128, 82, 255;--card:linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.016));--card-sel:linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.03));--line:rgba(255, 255, 255, 0.09);--hl:rgba(255, 255, 255, 0.07);color-scheme:dark}
+[data-palette="parchment"]{--bg:#F2F0EB;--fg:41, 40, 39;--hi:#1C1B1A;--ink:#292827;--ink-2:#3E3C3A;--ink-3:#5C5A57;--ink-4:#625F5B;--ink-5:#6B6964;--ink-6:#B3B0AA;--loss:#A33A4E;--loss-rgb:163, 58, 78;--loss-ink:#8A2E40;--gain:#2A9C9A;--gain-rgb:42, 156, 154;--gain-ink:#0F6365;--acc:#714CB6;--acc-rgb:113, 76, 182;--acc-ink:#5B3A9A;--wash-a:212, 199, 255;--wash-b:163, 58, 78;--wash:0.22;--grain:0.03;--bloom:0.22;--glow:0.22;--tint-max:0.42;--cell-ink:#1C1B1A;--brand-a:#A33A4E;--brand-b:#714CB6;--brand-c:#2A9C9A;--brand-a-rgb:163, 58, 78;--brand-b-rgb:113, 76, 182;--brand-c-rgb:42, 156, 154;--card:linear-gradient(180deg, #FFFFFF, #FBFAF7);--card-sel:linear-gradient(180deg, #FFFFFF, #F7F5F0);--line:#E3E3E2;--hl:rgba(255, 255, 255, 0.9);color-scheme:light}
+[data-palette="market"]{--bg:#050608;--fg:255, 255, 255;--hi:#FFFFFF;--ink:#F3F4F8;--ink-2:#C7CCD6;--ink-3:#A6ADBA;--ink-4:#8A92A2;--ink-5:#737B8B;--ink-6:#4E5563;--loss:#DC2626;--loss-rgb:220, 38, 38;--loss-ink:#F87171;--gain:#5EE6A0;--gain-rgb:94, 230, 160;--gain-ink:#86EFAC;--acc:#E270FF;--acc-rgb:226, 112, 255;--acc-ink:#F0C8FF;--wash-a:226, 112, 255;--wash-b:255, 128, 64;--wash:0.1;--grain:0.05;--bloom:0.55;--glow:0.55;--tint-max:0.5;--cell-ink:#FFFFFF;--brand-a:#FF8040;--brand-b:#E270FF;--brand-c:#5096FF;--brand-a-rgb:255, 128, 64;--brand-b-rgb:226, 112, 255;--brand-c-rgb:80, 150, 255;--card:linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.016));--card-sel:linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.03));--line:rgba(255, 255, 255, 0.08);--hl:rgba(255, 255, 255, 0.07);color-scheme:dark}
+[data-palette="teal"]{--bg:#050608;--fg:255, 255, 255;--hi:#FFFFFF;--ink:#F3F4F8;--ink-2:#C7CCD6;--ink-3:#A6ADBA;--ink-4:#8A92A2;--ink-5:#737B8B;--ink-6:#4E5563;--loss:#DC2626;--loss-rgb:220, 38, 38;--loss-ink:#F87171;--gain:#2DD4BF;--gain-rgb:45, 212, 191;--gain-ink:#5EEAD4;--acc:#E270FF;--acc-rgb:226, 112, 255;--acc-ink:#F0C8FF;--wash-a:226, 112, 255;--wash-b:255, 128, 64;--wash:0.1;--grain:0.05;--bloom:0.55;--glow:0.55;--tint-max:0.5;--cell-ink:#FFFFFF;--brand-a:#FF8040;--brand-b:#E270FF;--brand-c:#5096FF;--brand-a-rgb:255, 128, 64;--brand-b-rgb:226, 112, 255;--brand-c-rgb:80, 150, 255;--card:linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.016));--card-sel:linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.03));--line:rgba(255, 255, 255, 0.08);--hl:rgba(255, 255, 255, 0.07);color-scheme:dark}
+[data-palette="sky"]{--bg:#050608;--fg:255, 255, 255;--hi:#FFFFFF;--ink:#F3F4F8;--ink-2:#C7CCD6;--ink-3:#A6ADBA;--ink-4:#8A92A2;--ink-5:#737B8B;--ink-6:#4E5563;--loss:#FF6363;--loss-rgb:255, 99, 99;--loss-ink:#FF8A8A;--gain:#5B9DFF;--gain-rgb:91, 157, 255;--gain-ink:#8DBBFF;--acc:#FBBF24;--acc-rgb:251, 191, 36;--acc-ink:#FCD34D;--wash-a:226, 112, 255;--wash-b:255, 128, 64;--wash:0.1;--grain:0.05;--bloom:0.55;--glow:0.55;--tint-max:0.56;--cell-ink:#FFFFFF;--brand-a:#FF8040;--brand-b:#E270FF;--brand-c:#5096FF;--brand-a-rgb:255, 128, 64;--brand-b-rgb:226, 112, 255;--brand-c-rgb:80, 150, 255;--card:linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.016));--card-sel:linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.03));--line:rgba(255, 255, 255, 0.08);--hl:rgba(255, 255, 255, 0.07);color-scheme:dark}
+a{color:var(--hi)}a:hover{color:var(--ink-2)}
+button,a{-webkit-tap-highlight-color:transparent}
+button:focus-visible,a:focus-visible{outline:2px solid var(--acc);outline-offset:3px}
+button:disabled{cursor:default}
+@media (max-width: 960px){.bento{grid-template-columns:1fr!important}.bento>*{grid-column:auto!important}}
+</style>
+</helmet>
+<div data-palette="{{palette}}" style="position: relative; min-height: {{minH}}; overflow: hidden; background: radial-gradient(1100px 520px at 78% -8%, rgba(var(--wash-a), var(--wash)), transparent 62%), radial-gradient(900px 480px at -6% 18%, rgba(var(--wash-b), calc(var(--wash) * 0.6)), transparent 60%), var(--bg); color: var(--ink); font-family: Geist, Inter, system-ui, sans-serif; font-size: 14px; line-height: 1.5; font-variant-numeric: tabular-nums">
+  <svg aria-hidden="true" style="position: absolute; inset: 0; width: 100%; height: 100%; opacity: var(--grain); pointer-events: none">
+    <filter id="grain"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="3" stitchTiles="stitch"></feTurbulence></filter>
+    <rect width="100%" height="100%" filter="url(#grain)"></rect>
+  </svg>
+
+  <header style="position: relative; max-width: 1400px; margin: 0 auto; padding: 16px 24px 0; box-sizing: border-box">
+    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px 24px; padding: 6px 8px 6px 16px; border-radius: 18px; background: rgba(var(--fg), 0.035); border: 1px solid var(--line); box-shadow: inset 0 1px 0 var(--hl); backdrop-filter: blur(16px)">
+    <div style="display: flex; align-items: center; gap: 10px">
+      <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M3 19 H10 Q15 19 21 5" style="fill: none; stroke: var(--hi); stroke-width: 2px; stroke-linecap: round"></path>
+        <circle cx="10" cy="19" r="2.4" style="fill: var(--acc)"></circle>
+      </svg>
+      <span style="font-weight: 600; font-size: 16px; letter-spacing: -0.01em">derivBook</span>
+    </div>
+    <nav aria-label="Views" style="margin: 0 auto; display: flex; gap: 2px; padding: 4px; border-radius: 999px; background: rgba(var(--fg), 0.05); border: 1px solid rgba(var(--fg), 0.07)">
+      <a href="Five.dc.html" style="display: inline-flex; align-items: center; min-height: 40px; padding: 0 18px; border-radius: 999px; color: var(--ink-2); text-decoration: none; font-weight: 500">Explorer</a>
+      <a href="FiveMap.dc.html" aria-current="page" style="display: inline-flex; align-items: center; min-height: 40px; padding: 0 18px; border-radius: 999px; background: var(--hi); color: var(--bg); text-decoration: none; font-weight: 500">Exposure map</a>
+      <span style="display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 14px 0 18px; color: var(--ink-4); font-weight: 500">Market making <span style="font-size: 11px; padding: 1px 8px; border-radius: 999px; border: 1px solid rgba(var(--fg), 0.14); color: var(--ink-3)">Soon</span></span>
+    </nav>
+    <dl aria-label="Base market" style="margin: 0; display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 13px">
+      <dt style="color: var(--ink-4)">Base market</dt>
+      <div style="display: flex; gap: 6px"><dt style="color: var(--ink-4)">SPX</dt><dd style="margin: 0">6,000</dd></div>
+      <div style="display: flex; gap: 6px"><dt style="color: var(--ink-4)">XYZ</dt><dd style="margin: 0">42.00</dd></div>
+      <div style="display: flex; gap: 6px"><dt style="color: var(--ink-4)">Rate</dt><dd style="margin: 0">4.00%</dd></div>
+    </dl>
+    </div>
+  </header>
+
+  <main style="position: relative; max-width: 1400px; margin: 0 auto; padding: 24px 24px 64px; box-sizing: border-box; display: flex; flex-direction: column; gap: 48px">
+
+    <section aria-labelledby="m-title" style="display: flex; flex-direction: column; gap: 16px">
+      <div style="display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 40px">
+        <h1 id="m-title" style="margin: 0; font-family: 'Instrument Serif', Georgia, serif; font-weight: 400; font-size: 60px; line-height: 1; letter-spacing: -0.01em; color: var(--hi)">Exposure map</h1>
+        <p style="margin: 0; flex: 0 1 560px; font-size: 14px; line-height: 1.6; color: var(--ink-3); text-wrap: pretty">Each column moves one market input and holds everything else at the base market. Each cell is how much that position’s price changes. Click a cell to read it.</p>
+      </div>
+
+      <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px">
+        <div role="group" aria-label="Cell content" style="display: inline-flex; gap: 2px; padding: 4px; border-radius: 999px; background: rgba(var(--fg), 0.05); border: 1px solid rgba(var(--fg), 0.07)">
+          <sc-for list="{{viewBtns}}" as="b" hint-placeholder-count="2">
+            <button type="button" aria-pressed="{{b.pressed}}" onClick="{{b.pick}}" style="min-height: 40px; padding: 0 18px; border: 0; border-radius: 999px; font: inherit; font-weight: 500; cursor: pointer; {{b.style}}">{{b.label}}</button>
+          </sc-for>
+        </div>
+        <div role="group" aria-label="Units" style="display: inline-flex; gap: 2px; padding: 4px; border-radius: 999px; background: rgba(var(--fg), 0.05); border: 1px solid rgba(var(--fg), 0.07)">
+          <sc-for list="{{unitBtns}}" as="b" hint-placeholder-count="2">
+            <button type="button" aria-pressed="{{b.pressed}}" onClick="{{b.pick}}" disabled="{{b.disabled}}" style="min-height: 40px; padding: 0 18px; border: 0; border-radius: 999px; font: inherit; font-weight: 500; cursor: pointer; {{b.style}}">{{b.label}}</button>
+          </sc-for>
+        </div>
+        <div aria-hidden="true" style="margin-left: auto; display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--ink-3)">
+          <span>Loses more</span>
+          <span style="display: flex; gap: 3px">
+            <span style="width: 26px; height: 16px; border-radius: 4px; background: rgba(var(--loss-rgb), var(--tint-max))"></span>
+            <span style="width: 26px; height: 16px; border-radius: 4px; background: rgba(var(--loss-rgb), calc(var(--tint-max) * 0.5))"></span>
+            <span style="width: 26px; height: 16px; border-radius: 4px; background: rgba(var(--fg), 0.03)"></span>
+            <span style="width: 26px; height: 16px; border-radius: 4px; background: rgba(var(--gain-rgb), calc(var(--tint-max) * 0.5))"></span>
+            <span style="width: 26px; height: 16px; border-radius: 4px; background: rgba(var(--gain-rgb), var(--tint-max))"></span>
+          </span>
+          <span>Gains more</span>
+        </div>
+      </div>
+      <p style="margin: -4px 0 0; font-size: 12px; color: var(--ink-4); text-wrap: pretty">{{scaleNote}}</p>
+
+      <div style="border-radius: 22px; background: var(--card); border: 1px solid var(--line); box-shadow: inset 0 1px 0 var(--hl); overflow: hidden">
+        <div style="overflow-x: auto; padding: 18px">
+          <div role="table" aria-label="Exposure map" style="min-width: 1260px; display: flex; flex-direction: column; gap: 4px">
+            <div role="row" style="display: grid; grid-template-columns: 188px repeat(13, minmax(80px, 1fr)); gap: 4px; font-size: 12px; color: var(--ink-3); font-weight: 500">
+              <div></div>
+              <div style="grid-column: span 2; padding: 0 8px 6px; border-bottom: 1px solid rgba(var(--fg), 0.10)">SPX spot</div>
+              <div style="grid-column: span 2; padding: 0 8px 6px; border-bottom: 1px solid rgba(var(--fg), 0.10)">SPX volatility</div>
+              <div style="grid-column: span 2; padding: 0 8px 6px; border-bottom: 1px solid rgba(var(--fg), 0.10)">Rates</div>
+              <div style="grid-column: span 2; padding: 0 8px 6px; border-bottom: 1px solid rgba(var(--fg), 0.10)">XYZ spot</div>
+              <div style="grid-column: span 2; padding: 0 8px 6px; border-bottom: 1px solid rgba(var(--fg), 0.10)">XYZ volatility</div>
+              <div style="grid-column: span 2; padding: 0 8px 6px; border-bottom: 1px solid rgba(var(--fg), 0.10)">XYZ credit</div>
+              <div style="padding: 0 8px 6px; border-bottom: 1px solid rgba(var(--fg), 0.10)">Time</div>
+            </div>
+            <div role="row" style="display: grid; grid-template-columns: 188px repeat(13, minmax(80px, 1fr)); gap: 4px; font-size: 13px; color: var(--ink)">
+              <div role="columnheader" style="color: var(--ink-4); font-size: 12px; align-self: end; padding-bottom: 2px">Position, price</div>
+              <sc-for list="{{colHeads}}" as="ch" hint-placeholder-count="13">
+                <div role="columnheader" style="text-align: right; padding: 2px 10px 4px">{{ch}}</div>
+              </sc-for>
+            </div>
+            <sc-for list="{{heat}}" as="row" hint-placeholder-count="6">
+              <div role="row" style="display: grid; grid-template-columns: 188px repeat(13, minmax(80px, 1fr)); gap: 4px; align-items: stretch">
+                <div role="rowheader" style="display: flex; flex-direction: column; justify-content: center; min-height: 48px; padding-right: 8px">
+                  <span style="font-weight: 500; color: var(--hi)">{{row.name}}</span>
+                  <span style="font-size: 12px; color: var(--ink-4)">{{row.sub}}</span>
+                </div>
+                <sc-for list="{{row.cells}}" as="cell" hint-placeholder-count="13">
+                  <button type="button" role="cell" aria-label="{{cell.aria}}" aria-pressed="{{cell.pressed}}" onClick="{{cell.pick}}" style="min-height: 48px; padding: 0 10px; border: 0; border-radius: 8px; font: inherit; font-size: 13px; font-weight: 500; text-align: right; cursor: pointer; {{cell.style}}">{{cell.text}}</button>
+                </sc-for>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+
+      <div class="bento" style="display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 12px">
+        <div style="grid-column: span 8; padding: 22px; border-radius: 22px; background: var(--card); border: 1px solid var(--line); box-shadow: inset 0 1px 0 var(--hl); display: flex; flex-wrap: wrap; align-items: flex-start; gap: 12px 28px">
+          <div style="display: flex; flex-direction: column; gap: 2px; min-width: 150px">
+            <span style="font-size: 46px; font-weight: 300; letter-spacing: -0.03em; line-height: 1; {{detailColor}}">{{detailValue}}</span>
+            <span style="font-size: 13px; color: var(--ink-3)">{{detailSub}}</span>
+          </div>
+          <div style="flex: 1 1 380px; display: flex; flex-direction: column; gap: 10px">
+            <p style="margin: 0; font-size: 16px; line-height: 1.5; color: var(--hi); text-wrap: pretty">{{detailSentence}}</p>
+            <div style="display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; border-radius: 12px; background: rgba(var(--fg), 0.035)">
+              <span style="font-size: 12px; color: var(--ink-4)">Why</span>
+              <p style="margin: 0; font-size: 14px; line-height: 1.55; color: var(--ink); text-wrap: pretty">{{detailWhy}}</p>
+            </div>
+            <p style="margin: 0; font-size: 13px; line-height: 1.55; color: var(--ink-3); text-wrap: pretty">{{detailContext}}</p>
+          </div>
+        </div>
+        <div style="grid-column: span 4; padding: 20px; border-radius: 22px; background: var(--card); border: 1px solid var(--line); box-shadow: inset 0 1px 0 var(--hl); display: flex; flex-direction: column; gap: 10px">
+          <h2 style="margin: 0; font-size: 14px; font-weight: 500; color: var(--ink-2)">{{colTitle}}</h2>
+          <ul style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px">
+            <sc-for list="{{colList}}" as="cl" hint-placeholder-count="6">
+              <li style="display: grid; grid-template-columns: minmax(0, 1fr) 64px 76px; align-items: center; gap: 10px; min-height: 28px; font-size: 13px">
+                <span style="{{cl.nameStyle}}">{{cl.name}}</span>
+                <span aria-hidden="true" style="position: relative; height: 8px; border-radius: 2px; background: rgba(var(--fg), 0.04)">
+                  <span style="position: absolute; top: 0; bottom: 0; left: {{cl.left}}%; width: {{cl.width}}%; border-radius: 2px; {{cl.bar}}"></span>
+                  <span style="position: absolute; top: -3px; bottom: -3px; left: 50%; width: 1px; background: rgba(var(--fg), 0.25)"></span>
+                </span>
+                <span style="text-align: right; {{cl.valueStyle}}">{{cl.value}}</span>
+              </li>
+            </sc-for>
+          </ul>
+          <p style="margin: auto 0 0; font-size: 12px; color: var(--ink-4); text-wrap: pretty">{{colNote}}</p>
+        </div>
+      </div>
+    </section>
+
+    <section aria-labelledby="j-title" style="display: flex; flex-direction: column; gap: 16px">
+      <div style="display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 40px">
+        <h2 id="j-title" style="margin: 0; font-family: 'Instrument Serif', Georgia, serif; font-weight: 400; font-size: 40px; line-height: 1; letter-spacing: -0.005em; color: var(--hi)">Joint scenarios</h2>
+        <p style="margin: 0; flex: 0 1 560px; font-size: 14px; line-height: 1.6; color: var(--ink-3); text-wrap: pretty">Real selloffs move several inputs at once. The interaction is the combined result minus the sum of each move on its own. Values are in each position’s own units.</p>
+      </div>
+
+      <div role="group" aria-label="Scenario" class="bento" style="display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 12px">
+        <sc-for list="{{scenarios}}" as="s" hint-placeholder-count="2">
+          <button type="button" aria-pressed="{{s.pressed}}" onClick="{{s.pick}}" style="grid-column: span 6; text-align: left; padding: 20px; border-radius: 22px; font: inherit; color: var(--ink); cursor: pointer; display: flex; flex-direction: column; gap: 12px; {{s.style}}">
+            <span style="display: flex; flex-direction: column; gap: 4px">
+              <span style="font-family: 'Instrument Serif', Georgia, serif; font-weight: 400; font-size: 30px; line-height: 1.05; color: var(--hi)">{{s.name}}</span>
+              <span style="font-size: 13px; color: var(--ink-3)">{{s.story}}</span>
+            </span>
+            <span style="display: flex; flex-wrap: wrap; gap: 6px">
+              <sc-for list="{{s.moves}}" as="m" hint-placeholder-count="3">
+                <span style="font-size: 13px; padding: 4px 10px; border-radius: 999px; background: rgba(var(--fg), 0.06); color: var(--ink)">{{m}}</span>
+              </sc-for>
+            </span>
+            <span style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding-top: 12px; border-top: 1px solid rgba(var(--fg), 0.08); font-size: 13px">
+              <span style="color: var(--ink-3)">Largest interaction: {{s.topName}}</span>
+              <span style="font-size: 15px; font-weight: 500; color: var(--hi)">{{s.topValue}}</span>
+            </span>
+          </button>
+        </sc-for>
+      </div>
+
+      <div class="bento" style="display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 12px">
+        <div style="grid-column: span 4; padding: 16px; border-radius: 22px; background: var(--card); border: 1px solid var(--line); box-shadow: inset 0 1px 0 var(--hl); display: flex; flex-direction: column; gap: 4px">
+          <div style="display: flex; justify-content: space-between; margin: 4px 6px 8px; font-size: 12px; color: var(--ink-4)">
+            <h3 style="margin: 0; font-size: 14px; font-weight: 500; color: var(--ink-2)">Positions</h3>
+            <span>Interaction</span>
+          </div>
+          <sc-for list="{{posList}}" as="p" hint-placeholder-count="6">
+            <button type="button" aria-pressed="{{p.pressed}}" onClick="{{p.pick}}" disabled="{{p.disabled}}" style="display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 54px; padding: 8px 12px; border-radius: 14px; font: inherit; text-align: left; {{p.style}}">
+              <span style="display: flex; flex-direction: column">
+                <span style="font-weight: 500">{{p.name}}</span>
+                <span style="font-size: 12px; {{p.subStyle}}">{{p.sub}}</span>
+              </span>
+              <span style="font-size: 13px; font-weight: 500; {{p.interStyle}}">{{p.inter}}</span>
+            </button>
+          </sc-for>
+        </div>
+
+        <div style="grid-column: span 8; padding: 24px; border-radius: 22px; background: var(--card); border: 1px solid var(--line); box-shadow: inset 0 1px 0 var(--hl); display: flex; flex-direction: column; gap: 18px; min-width: 0">
+          <div style="display: flex; flex-direction: column; gap: 6px">
+            <p style="margin: 0; font-family: 'Instrument Serif', Georgia, serif; font-weight: 400; font-size: 29px; line-height: 1.2; color: var(--hi); text-wrap: pretty">{{lead}}</p>
+            <p style="margin: 0; font-size: 14px; line-height: 1.6; color: var(--ink-3); max-width: 680px; text-wrap: pretty">{{why}}</p>
+          </div>
+          <div role="img" aria-label="{{wfAria}}" style="display: flex; flex-direction: column; gap: 8px">
+            <div style="display: grid; grid-template-columns: minmax(120px, 170px) 1fr 112px; gap: 16px; font-size: 12px; color: var(--ink-4)">
+              <span>Step</span>
+              <span style="position: relative; height: 16px"><span style="position: absolute; left: {{zeroPct}}%; transform: translateX(-50%)">0</span></span>
+              <span style="text-align: right">{{wfUnit}}</span>
+            </div>
+            <sc-for list="{{wf}}" as="w" hint-placeholder-count="6">
+              <div style="display: grid; grid-template-columns: minmax(120px, 170px) 1fr 112px; align-items: center; gap: 16px; {{w.rowStyle}}">
+                <span style="font-size: 13px; {{w.labelStyle}}">{{w.label}}</span>
+                <span style="position: relative; height: 24px">
+                  <span style="position: absolute; top: -5px; bottom: -5px; left: {{zeroPct}}%; width: 1px; background: rgba(var(--fg), 0.25)"></span>
+                  <span style="position: absolute; top: 0; bottom: 0; left: {{w.left}}%; width: {{w.width}}%; border-radius: 4px; {{w.bar}}"></span>
+                </span>
+                <span style="font-size: 14px; text-align: right; {{w.valueStyle}}">{{w.value}}</span>
+              </div>
+            </sc-for>
+          </div>
+          <div style="display: flex; flex-wrap: wrap; gap: 8px 20px; font-size: 12px; color: var(--ink-3)">
+            <span style="display: inline-flex; align-items: center; gap: 8px"><span aria-hidden="true" style="width: 16px; height: 10px; border-radius: 3px; background: var(--loss)"></span>Loss from one move</span>
+            <span style="display: inline-flex; align-items: center; gap: 8px"><span aria-hidden="true" style="width: 16px; height: 10px; border-radius: 3px; background: var(--gain)"></span>Gain from one move</span>
+            <span style="display: inline-flex; align-items: center; gap: 8px"><span aria-hidden="true" style="width: 16px; height: 10px; border-radius: 3px; border: 1.5px dashed rgba(var(--fg), 0.6); box-sizing: border-box"></span>Sum of the parts</span>
+            <span style="display: inline-flex; align-items: center; gap: 8px"><span aria-hidden="true" style="width: 16px; height: 10px; border-radius: 3px; background: var(--acc)"></span>Interaction</span>
+            <span style="display: inline-flex; align-items: center; gap: 8px"><span aria-hidden="true" style="width: 16px; height: 10px; border-radius: 3px; background: var(--hi)"></span>All moves together</span>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"palette":{"editor":"enum","options":["horizon","dusk","coral","moss","iris","parchment","market","teal","sky"],"default":"dusk"},"embedded":{"editor":null},"$preview":{"width":1440,"height":1960}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { view: 'pnl', units: 'own', selR: 5, selC: 11, joint: 'distress', pos: 5 };
+  }
+
+  fmt(v) {
+    return Math.abs(v) < 0.005 ? '0' : (v > 0 ? '+' : '−') + Math.abs(v).toFixed(2);
+  }
+
+  fmtPct(v) {
+    const a = Math.abs(v);
+    if (a < 0.0005) return '0%';
+    const d = a >= 10 ? 1 : (a >= 0.1 ? 2 : 3);
+    return (v > 0 ? '+' : '−') + a.toFixed(d) + '%';
+  }
+
+  tint(v, max) {
+    if (Math.abs(v) < 1e-9 || max < 1e-12) return 'background: rgba(var(--fg), 0.02); color: var(--ink-6)';
+    // Square-root scale so small but real exposures still show next to large ones.
+    const norm = Math.sqrt(Math.min(1, Math.abs(v) / max));
+    const col = v < 0 ? 'var(--loss-rgb)' : 'var(--gain-rgb)';
+    return 'background: rgba(' + col + ', calc(var(--tint-max) * ' + (0.11 + 0.89 * norm).toFixed(3) + ')); color: var(--cell-ink)';
+  }
+
+  data() {
+    return {
+      names: ['SPX call', 'SPX put', 'SPX American put', 'SPX future', 'SOFR future', 'XYZ convertible'],
+      short: ['the call', 'the put', 'the American put', 'the future', 'the SOFR future', 'the convertible'],
+      units: ['index points', 'index points', 'index points', 'index points', 'price points', 'dollars per bond'],
+      base: [342.1096, 262.1752, 269.4663, 6081.5492, 95.9799, 1020.4772],
+      vals: [
+        [-243.78, 419.99, -82.74, 82.93, -3.79, 3.81, 0, 0, 0, 0, 0, 0, -1.03],
+        [352.34, -176.12, -82.74, 82.93, 3.57, -3.53, 0, 0, 0, 0, 0, 0, -0.60],
+        [371.77, -181.64, -82.54, 82.84, 2.80, -2.75, 0, 0, 0, 0, 0, 0, -0.65],
+        [-608.15, 608.15, 0, 0, -7.60, 7.61, 0, 0, 0, 0, 0, 0, -0.45],
+        [0, 0, 0, 0, 0.25, -0.25, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 5.27, -5.15, -57.13, 60.79, -31.15, 30.65, 23.72, -22.56, 0.02]
+      ],
+      // Why each position reacts to each input. Groups: SPX spot, SPX vol, rates, XYZ spot, XYZ vol, XYZ credit, time.
+      why: [
+        ['Delta. A call gains when the index rises. The gain on +10% is bigger than the loss on −10% because gamma makes delta grow as the call moves into the money.',
+         'Vega. More volatility means more chance of finishing far in the money, while the most a call can lose is its price, so it gains.',
+         'Rho. A higher rate lowers today’s value of the strike you pay at expiry, so the call gains a little.',
+         '', '', '',
+         'Theta. One less day for the index to move in its favor, so time value bleeds away.'],
+        ['Delta. A put gains when the index falls. Gamma makes the gain on −10% bigger than the loss on +10%.',
+         'Vega. Like the call, the put’s loss is capped at its price, so extra volatility only adds value.',
+         'Rho. A higher rate lowers today’s value of the strike you receive at expiry, so the put loses a little.',
+         '', '', '',
+         'Theta. Time value bleeds as expiry gets closer.'],
+        ['Delta. A bit more sensitive than the European put in both directions, because the right to exercise early makes it behave more like a short position in the index.',
+         'Vega. Almost the same as the European put. Slightly less, because the early-exercise part of its value gets less from volatility.',
+         'Rho. Smaller than the European put’s, because higher rates make exercising early and collecting the strike sooner more attractive, which offsets part of the loss.',
+         '', '', '',
+         'Theta. Bleeds time value like the European put.'],
+        ['Delta of about 1. The future moves point for point with the index, scaled up slightly by carry. The two sides are equal because it has no gamma.',
+         'A future has no optionality, so volatility doesn’t appear in its price.',
+         'Carry. The future is spot grown at the rate minus the dividend yield, so a higher rate raises it.',
+         '', '', '',
+         'One less day of carry, so it drifts toward spot.'],
+        ['', '',
+         'It’s quoted as 100 minus the rate, so it falls when rates rise. That’s the whole instrument.',
+         '', '', '',
+         'It’s priced from today’s rate alone, so a day passing changes nothing in this model.'],
+        ['', '',
+         'Two effects pull against each other: a higher rate lowers the bond floor and raises the stock’s forward. The bond side wins here, so it loses.',
+         'Equity delta. The conversion right gains with the stock. The gain on +10% beats the loss on −10% because the bond floor cushions the downside.',
+         'Vega. The right to convert is worth more when the stock swings more.',
+         'The debt part is discounted at the rate plus XYZ’s credit spread, so a wider spread lowers the bond floor.',
+         'Nearly flat. The bond floor rises toward face as maturity nears, which roughly offsets the conversion right’s time decay.']
+      ],
+      cols: [
+        { g: 'SPX spot', m: '−10%', d: 'SPX falls 10%' },
+        { g: 'SPX spot', m: '+10%', d: 'SPX rises 10%' },
+        { g: 'SPX volatility', m: '−5 pts', d: 'SPX volatility drops 5 points' },
+        { g: 'SPX volatility', m: '+5 pts', d: 'SPX volatility rises 5 points' },
+        { g: 'Rates', m: '−25 bp', d: 'rates fall 25 basis points' },
+        { g: 'Rates', m: '+25 bp', d: 'rates rise 25 basis points' },
+        { g: 'XYZ spot', m: '−10%', d: 'XYZ stock falls 10%' },
+        { g: 'XYZ spot', m: '+10%', d: 'XYZ stock rises 10%' },
+        { g: 'XYZ volatility', m: '−5 pts', d: 'XYZ volatility drops 5 points' },
+        { g: 'XYZ volatility', m: '+5 pts', d: 'XYZ volatility rises 5 points' },
+        { g: 'XYZ credit', m: '−100 bp', d: 'XYZ’s credit spread tightens by 100 basis points' },
+        { g: 'XYZ credit', m: '+100 bp', d: 'XYZ’s credit spread widens by 100 basis points' },
+        { g: 'Time', m: '+1 day', d: 'one day passes' }
+      ],
+      joints: {
+        crash: {
+          name: 'Equity crash',
+          story: 'Stocks fall, fear lifts volatility, and money moves into bonds.',
+          moves: ['SPX −10%', 'SPX vol +8 pts', 'Rates −25 bp'],
+          v: [
+            [-243.78, 132.70, -3.79, -114.87, -140.20, -25.34],
+            [352.34, 132.70, 3.57, 488.60, 463.27, -25.34],
+            [371.77, 132.58, 2.80, 507.15, 472.26, -34.89],
+            [-608.15, 0, -7.60, -615.75, -614.99, 0.76],
+            [0, 0, 0.25, 0.25, 0.25, 0],
+            [0, 0, 5.27, 5.27, 5.27, 0]
+          ],
+          why: [
+            'After a 10% drop the call sits far below the strike, where vega is small, so the volatility spike helps it much less than it would at today’s spot.',
+            'After a 10% drop the put sits away from the strike, where vega is smaller, so the volatility spike helps less than the single-move column suggests. Put-call parity makes its interaction match the call’s exactly.',
+            'Deep in the money, the American put is close to being exercised and behaves more like its payoff, so it gets even less from the volatility spike than the European put.',
+            'The future’s price is spot multiplied by a rate term, so moving both at once creates a small cross effect.',
+            'It reads only the interest rate, so there’s nothing for the other two moves to interact with.',
+            'Of these three moves it only reads the rate, so the parts add up exactly.'
+          ],
+          dflt: 0
+        },
+        distress: {
+          name: 'XYZ distress',
+          story: 'The stock collapses and the market starts doubting XYZ can repay.',
+          moves: ['XYZ −20%', 'XYZ vol +10 pts', 'Credit +200 bp'],
+          v: [
+            [0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0],
+            [-112.05, 63.87, -44.03, -92.20, -108.33, -16.12]
+          ],
+          why: ['', '', '', '', '',
+            'Once the stock has fallen, conversion is less likely, so more of the bond’s value is debt exposed to XYZ’s credit. The spread widening bites harder and the volatility spike helps less. Desks call this wrong-way risk.'],
+          dflt: 5
+        }
+      }
+    };
+  }
+
+  renderVals() {
+    const st = this.state, self = this, D = this.data();
+    const moved = st.view === 'moved', pct = st.units === 'pct' && !moved;
+
+    // what each cell shows, in the chosen units
+    const show = function (ri, ci) { const v = D.vals[ri][ci]; return pct ? v / D.base[ri] * 100 : v; };
+    const txt = function (v) { return pct ? self.fmtPct(v) : self.fmt(v); };
+    let gmax = 0;
+    D.vals.forEach(function (r, ri) { r.forEach(function (v, ci) { gmax = Math.max(gmax, Math.abs(show(ri, ci))); }); });
+
+    const heat = D.vals.map(function (row, ri) {
+      const rmax = Math.max.apply(null, row.map(Math.abs));
+      return {
+        name: D.names[ri],
+        sub: self.num(D.base[ri]) + ' ' + D.units[ri],
+        cells: row.map(function (raw, ci) {
+          const v = show(ri, ci), zero = Math.abs(raw) < 0.005, sel = st.selR === ri && st.selC === ci;
+          let style, text;
+          if (moved) {
+            text = zero ? '—' : 'Moves';
+            style = zero ? 'background: rgba(var(--fg), 0.02); color: var(--ink-6)' : 'background: rgba(var(--fg), 0.14); color: var(--hi)';
+          } else {
+            text = txt(v);
+            style = self.tint(v, pct ? gmax : rmax);
+          }
+          if (sel) style += '; outline: 2px solid var(--hi); outline-offset: -2px; box-shadow: 0 0 18px rgba(var(--acc-rgb), 0.45)';
+          return {
+            text: text,
+            style: style,
+            pressed: sel ? 'true' : 'false',
+            aria: D.names[ri] + ' when ' + D.cols[ci].d + ': ' + self.fmt(raw) + ' ' + D.units[ri] + ', ' + self.fmtPct(raw / D.base[ri] * 100) + ' of its price',
+            pick: function () { self.setState({ selR: ri, selC: ci }); }
+          };
+        })
+      };
+    });
+
+    // reading strip: always shows both units
+    const raw = D.vals[st.selR][st.selC], col = D.cols[st.selC], zero = Math.abs(raw) < 0.005;
+    const p = raw / D.base[st.selR] * 100;
+    const movers = D.vals.filter(function (r) { return Math.abs(r[st.selC]) >= 0.005; }).length;
+    let bi = 0;
+    D.vals[st.selR].forEach(function (v, i) { if (Math.abs(v) > Math.abs(D.vals[st.selR][bi])) bi = i; });
+    const detailSentence = zero
+      ? 'The ' + D.names[st.selR] + ' doesn’t move when ' + col.d + '.'
+      : 'The ' + D.names[st.selR] + (raw < 0 ? ' loses ' : ' gains ') + Math.abs(raw).toFixed(2) + ' ' + D.units[st.selR] + ' when ' + col.d + ', which is ' + self.fmtPct(p).replace(/^[+−]/, '') + ' of its price.';
+    const grp = [0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6][st.selC];
+    const detailWhy = D.why[st.selR][grp] || ('The ' + D.names[st.selR] + ' doesn’t use this input anywhere in its price, so it can’t move.');
+    const detailContext = 'Its biggest exposure on the map is ' + D.cols[bi].g + ' ' + D.cols[bi].m + ', at ' + this.fmt(D.vals[st.selR][bi]) + '. ' + movers + ' of 6 positions move under this shock.';
+    const detailColor = zero ? 'color: var(--ink-5)' : (raw < 0 ? 'color: var(--loss-ink)' : 'color: var(--gain-ink)');
+
+    // column list with bars on one scale
+    const cvals = D.vals.map(function (r, i) { return show(i, st.selC); });
+    const cpct = D.vals.map(function (r, i) { return r[st.selC] / D.base[i] * 100; });
+    const cmax = Math.max.apply(null, cpct.map(Math.abs));
+    const colList = cvals.map(function (v, i) {
+      const z = Math.abs(D.vals[i][st.selC]) < 0.005, on = i === st.selR;
+      const w = cmax < 1e-12 ? 0 : Math.abs(cpct[i]) / cmax * 50;
+      return {
+        name: D.names[i],
+        value: z ? '0' : txt(v),
+        left: (v < 0 ? 50 - w : 50).toFixed(2),
+        width: w.toFixed(2),
+        bar: v < 0 ? 'background: var(--loss)' : 'background: var(--gain)',
+        nameStyle: on ? 'color: var(--hi); font-weight: 500' : (z ? 'color: var(--ink-5)' : 'color: var(--ink-2)'),
+        valueStyle: z ? 'color: var(--ink-6)' : (v < 0 ? 'color: var(--loss-ink)' : 'color: var(--gain-ink)')
+      };
+    });
+
+    const btn = function (on) { return on ? 'background: var(--hi); color: var(--bg)' : 'background: transparent; color: var(--ink-2)'; };
+    const viewBtns = [['pnl', 'Price change'], ['moved', 'What moves']].map(function (b) {
+      return { label: b[1], pressed: st.view === b[0] ? 'true' : 'false', style: btn(st.view === b[0]), pick: function () { self.setState({ view: b[0] }); } };
+    });
+    const unitBtns = [['own', 'Own units'], ['pct', '% of price']].map(function (b) {
+      const on = st.units === b[0] && !moved;
+      return { label: b[1], pressed: on ? 'true' : 'false', disabled: moved, style: btn(on) + (moved ? '; opacity: 0.4' : ''), pick: function () { self.setState({ units: b[0] }); } };
+    });
+    const scaleNote = moved
+      ? 'Shows which inputs each position reads at all, regardless of size.'
+      : (pct ? 'Every cell is divided by that position’s base price, so the whole map shares one color scale and rows compare directly. For the futures, price means the contract’s notional, since a future costs nothing to enter.'
+             : 'Each row is in its own units, so color is scaled within the row. Switch to % of price to compare rows.');
+
+    // joint scenarios
+    const J = D.joints[st.joint], pos = st.pos;
+    const scenarios = ['crash', 'distress'].map(function (k) {
+      const j = D.joints[k], on = st.joint === k;
+      let ti = 0;
+      j.v.forEach(function (r, i) { if (Math.abs(r[5]) > Math.abs(j.v[ti][5])) ti = i; });
+      return {
+        name: j.name, story: j.story, moves: j.moves,
+        topName: D.names[ti], topValue: self.fmt(j.v[ti][5]),
+        pressed: on ? 'true' : 'false',
+        style: on ? 'border: 1px solid transparent; background: linear-gradient(180deg, rgba(var(--acc-rgb), 0.16), rgba(var(--acc-rgb), 0.05)) padding-box, linear-gradient(var(--bg), var(--bg)) padding-box, linear-gradient(120deg, var(--brand-a), var(--brand-b), var(--brand-c)) border-box' : 'border: 1px solid var(--line); background: var(--card); box-shadow: inset 0 1px 0 var(--hl)',
+        pick: function () { self.setState({ joint: k, pos: j.dflt }); }
+      };
+    });
+
+    const posList = J.v.map(function (r, i) {
+      const affected = Math.abs(r[4]) >= 0.005 || Math.abs(r[5]) >= 0.005;
+      const on = pos === i;
+      return {
+        name: D.names[i],
+        sub: affected ? 'Together ' + self.fmt(r[4]) + ' ' + D.units[i] : 'Not affected',
+        subStyle: affected ? 'color: var(--ink-3)' : 'color: var(--ink-5)',
+        inter: affected ? self.fmt(r[5]) : '—',
+        interStyle: !affected || Math.abs(r[5]) < 0.005 ? 'color: var(--ink-5)' : 'color: var(--acc-ink)',
+        pressed: on ? 'true' : 'false',
+        disabled: !affected,
+        style: on ? 'border: 1px solid rgba(var(--fg), 0.5); background: rgba(var(--fg), 0.07); color: var(--hi); cursor: pointer'
+                  : (affected ? 'border: 1px solid transparent; background: rgba(var(--fg), 0.025); color: var(--ink); cursor: pointer'
+                              : 'border: 1px solid transparent; background: transparent; color: var(--ink-5)')
+      };
+    });
+
+    const r = J.v[pos], sum = r[3], together = r[4], inter = r[5];
+    const steps = [];
+    let run = 0;
+    for (let i = 0; i < 3; i++) { steps.push({ label: J.moves[i], a: run, b: run + r[i], kind: 'move', v: r[i] }); run += r[i]; }
+    steps.push({ label: 'Sum of the parts', a: 0, b: sum, kind: 'sum', v: sum });
+    steps.push({ label: 'Interaction', a: sum, b: sum + inter, kind: 'inter', v: inter });
+    steps.push({ label: 'All moves together', a: 0, b: together, kind: 'total', v: together });
+    let lo = 0, hi = 0;
+    steps.forEach(function (s) { lo = Math.min(lo, s.a, s.b); hi = Math.max(hi, s.a, s.b); });
+    if (hi - lo < 1e-9) { lo = -1; hi = 1; }
+    const pad = (hi - lo) * 0.04; lo -= pad; hi += pad;
+    const P = function (x) { return (x - lo) / (hi - lo) * 100; };
+    const wf = steps.map(function (s) {
+      const left = P(Math.min(s.a, s.b)), width = Math.max(0.5, P(Math.max(s.a, s.b)) - left);
+      let bar;
+      if (s.kind === 'move') bar = Math.abs(s.v) < 0.005 ? 'background: rgba(var(--fg), 0.2)' : (s.v < 0 ? 'background: var(--loss)' : 'background: var(--gain)');
+      else if (s.kind === 'sum') bar = 'border: 1.5px dashed rgba(var(--fg), 0.6); box-sizing: border-box';
+      else if (s.kind === 'inter') bar = Math.abs(s.v) < 0.005 ? 'background: rgba(var(--acc-rgb), 0.35)' : 'background: var(--acc)';
+      else bar = 'background: var(--hi)';
+      return {
+        label: s.label,
+        left: left.toFixed(2),
+        width: width.toFixed(2),
+        bar: bar,
+        value: self.fmt(s.v),
+        rowStyle: s.kind === 'sum' ? 'padding-top: 10px; border-top: 1px solid rgba(var(--fg), 0.08)' : '',
+        labelStyle: s.kind === 'move' ? 'color: var(--ink-2)' : (s.kind === 'inter' ? 'color: var(--acc-ink); font-weight: 500' : 'color: var(--hi); font-weight: 500'),
+        valueStyle: s.kind === 'inter' ? 'color: var(--acc-ink); font-weight: 600' : (s.kind === 'move' ? 'color: var(--ink-2)' : 'color: var(--hi); font-weight: 600')
+      };
+    });
+
+    const nm = D.short[pos], cap = nm.charAt(0).toUpperCase() + nm.slice(1);
+    const lead = Math.abs(inter) < 0.005
+      ? cap + (together < 0 ? ' loses ' : ' gains ') + Math.abs(together).toFixed(2) + ' ' + D.units[pos] + ', and the parts add up exactly.'
+      : 'Together, ' + nm + (together < 0 ? ' loses ' : ' gains ') + Math.abs(together).toFixed(2) + ' ' + D.units[pos] + '. That’s ' + Math.abs(inter).toFixed(2) + (inter < 0 ? ' worse' : ' better') + ' than the moves add up to on their own.';
+
+    return {
+      palette: this.props.palette || 'dusk',
+      minH: this.props.embedded ? '0' : '100vh',
+      viewBtns: viewBtns, unitBtns: unitBtns, scaleNote: scaleNote,
+      colHeads: D.cols.map(function (c) { return c.m; }),
+      heat: heat,
+      detailValue: pct ? this.fmtPct(p) : this.fmt(raw),
+      detailSub: pct ? this.fmt(raw) + ' ' + D.units[st.selR] : this.fmtPct(p) + ' of its price',
+      detailColor: detailColor,
+      detailSentence: detailSentence,
+      detailContext: detailContext,
+      detailWhy: detailWhy,
+      colTitle: 'All positions under ' + col.g + ' ' + col.m,
+      colList: colList,
+      colNote: 'Bars always compare % of price, so rows of different units line up fairly.',
+      scenarios: scenarios,
+      posList: posList,
+      lead: lead,
+      why: J.why[pos],
+      wf: wf,
+      wfUnit: D.units[pos],
+      zeroPct: P(0).toFixed(2),
+      wfAria: 'Waterfall for ' + D.names[pos] + ' in ' + J.name + ': each move alone, the sum of the parts, the interaction, and all moves together.'
+    };
+  }
+
+  num(v) {
+    return v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,5 @@
+node_modules/
+dist/
+# Copied from ../scripts by scripts/copy-engine.mjs; scripts/ is the only copy
+public/engine/
+*.tsbuildinfo
