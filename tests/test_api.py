@@ -1,11 +1,12 @@
 import json
 import math
 
+import numpy as np
 import pytest
 
 import api
 from batch import price_many
-from greeks import delta, gamma, theta, vega, rho
+from greeks import theta, vega, rho
 from market import Market
 
 # One instrument of every type, with a setup market, as the Explorer sends them
@@ -186,16 +187,35 @@ def _tree_cases(t):
     yield {"rate": 0.0}  # no rho
 
 
-def _tree_pct(d, m):
-    # The tree delta/gamma bump: 2 * sigma * sqrt(T / N)
-    return 2 * m.vol(d.underlying) * math.sqrt(d.time_to_expiry(m) / d.steps)
+def _tree_delta_gamma(d, m):
+    # The tree delta and gamma one tree at a time: price at S*exp(+/-h), with
+    # h = 2 * sigma * sqrt(T / N), and take the slope and curvature at S of the
+    # parabola through the three prices (central differences for unequal steps)
+    und = d.underlying
+    s = m.spot(und)
+    h = 2 * m.vol(und) * math.sqrt(d.time_to_expiry(m) / d.steps)
+    xs = [s * math.exp(-h), s, s * math.exp(h)]
+    ys = [float(d.price(m.set("spots", x, und))) for x in xs]
+    c2, c1, _ = np.polyfit(xs, ys, 2)
+    return c1 + 2 * c2 * s, 2 * c2
+
+
+def test_unequal_step_differences_are_exact_for_a_parabola():
+    # The formula is exact on V = 3 - 2S + 0.7S^2, at any spot and log bump
+    for spot, h in ((42.0, 0.15), (6000.0, 0.045), (100.0, 0.6)):
+        v = lambda x: 3 - 2 * x + 0.7 * x * x
+        up, mid, down = v(spot * math.exp(h)), v(spot), v(spot * math.exp(-h))
+        dl, gm = api._tree_delta_gamma(spot, h, up, mid, down)
+        assert dl == pytest.approx(-2 + 1.4 * spot, rel=1e-9)
+        assert gm == pytest.approx(1.4, rel=1e-7)
 
 
 @pytest.mark.parametrize("t", TREES)
 def test_tree_greeks_and_ladders_match_one_tree_at_a_time(t):
     # The batched Greeks and ladders equal greeks.py and plain price() calls on
-    # the tree of the same steps, in the same units: delta, gamma, vega, rho and
-    # the ladders on CURVE_STEPS, theta on the default steps (the theta chart's)
+    # the tree of the same steps, in the same units: delta, gamma (repriced at
+    # S*exp(+/-h)), vega, rho and the ladders on CURVE_STEPS, theta on the
+    # default steps (the theta chart's)
     spec, base = CASES[t]
     d = api.make_derivative(spec, api.CURVE_STEPS)
     full = api.make_derivative(spec)
@@ -204,9 +224,9 @@ def test_tree_greeks_and_ladders_match_one_tree_at_a_time(t):
         r = api.explore(spec, base, now)
         m = _market(spec, base, now)
         g = r["greeks"]
-        pct = _tree_pct(d, m)
-        assert g["delta"] == pytest.approx(float(delta(d, m, pct)), abs=1e-9)
-        assert g["gamma"] == pytest.approx(float(gamma(d, m, pct)), abs=1e-9)
+        dl, gm = _tree_delta_gamma(d, m)
+        assert g["delta"] == pytest.approx(dl, rel=1e-6, abs=1e-9)
+        assert g["gamma"] == pytest.approx(gm, rel=1e-6, abs=1e-9)
         assert g["theta"] == pytest.approx(float(theta(full, m)), abs=1e-9)
         assert g["vega"] == pytest.approx(float(vega(d_vega, m)) / 100, abs=1e-9)
         if m.rate == 0:
@@ -230,17 +250,16 @@ def test_tree_greeks_and_ladders_match_one_tree_at_a_time(t):
 
 @pytest.mark.parametrize("t", TREES)
 def test_tree_curves_reprice_each_level(t):
-    # Every point on the delta and gamma curves is its own +/-pct repricing on
-    # the CURVE_STEPS tree, at that level's spot
+    # Every point on the delta and gamma curves is its own S*exp(+/-h)
+    # repricing on the CURVE_STEPS tree, at that level's spot
     spec, base = CASES[t]
     d = api.make_derivative(spec, api.CURVE_STEPS)
     r = api.explore(spec, base)
     m = _market(spec, base)
-    pct = _tree_pct(d, m)
     for i in (0, 7, 30, 44, 60):
-        mi = m.set("spots", r["x"][i], d.underlying)
-        assert r["delta_curve"][i] == pytest.approx(float(delta(d, mi, pct)), abs=1e-9)
-        assert r["gamma_curve"][i] == pytest.approx(float(gamma(d, mi, pct)), abs=1e-9)
+        dl, gm = _tree_delta_gamma(d, m.set("spots", r["x"][i], d.underlying))
+        assert r["delta_curve"][i] == pytest.approx(dl, rel=1e-6, abs=1e-9)
+        assert r["gamma_curve"][i] == pytest.approx(gm, rel=1e-6, abs=1e-9)
 
 
 def _sign_changes(ys):
@@ -248,18 +267,18 @@ def _sign_changes(ys):
     return sum(1 for a, b in zip(diffs, diffs[1:]) if (a > 0) != (b > 0))
 
 
-@pytest.mark.parametrize("t", ["american_call", "american_put"])
-def test_american_gamma_has_no_zigzag(t):
-    # A handful of turns across the chart, not one per point
+@pytest.mark.parametrize("t", TREES)
+def test_tree_gamma_has_no_zigzag(t):
+    # A handful of turns across the chart, not one per point. The convertible's
+    # gamma only falls (the tree's wobble cancels out of the log bump), and the
+    # American put's few turns are early-exercise ripples near its flat top.
     spec, base = CASES[t]
     for now in (None, SHOCKED):
-        assert _sign_changes(api.explore(spec, base, now)["gamma_curve"]) < 10
+        turns = _sign_changes(api.explore(spec, base, now)["gamma_curve"])
+        assert turns == 0 if t == "convertible" else turns < 10
 
 
-# The convertible is left out: with a relative bump S(1 +/- p), the up and down
-# sides straddle different numbers of the tree's wobbles, and its gamma dips
-# below zero at some spots, the default spot among them.
-@pytest.mark.parametrize("t", ["american_call", "american_put"])
+@pytest.mark.parametrize("t", TREES)
 def test_tree_gamma_is_non_negative(t):
     spec, base = CASES[t]
     for now in (None, SHOCKED):
