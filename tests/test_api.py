@@ -106,7 +106,7 @@ def test_every_type(t, shocked):
         assert r["delta_curve"] is None and r["greeks"]["delta"] is None and r["theta_path"] is None
     else:
         assert len(r["delta_curve"]) == n and r["greeks"]["delta"] is not None
-        assert len(r["theta_path"]["values"]) == api.THETA_POINTS
+        assert len(r["theta_path"]["values"]) == _theta_points(t)
     assert len(r["rho_ladder"]) == 4
 
 
@@ -179,6 +179,10 @@ def test_a_tree_the_engine_refuses_is_reported():
 
 
 # ---------------------------------------------------------------- the trees
+
+def _theta_points(t):
+    return api.TREE_THETA_POINTS if t in TREES else api.THETA_POINTS
+
 
 def _tree_cases(t):
     yield None
@@ -306,13 +310,14 @@ def test_spot_move_runs_no_curve_trees(t, monkeypatch):
     monkeypatch.setattr(api, "price_many", lambda d, ms: sizes.append(len(ms)) or real(d, ms))
     api.explore(spec, base, {"spot_pct": 4})
     # One CURVE_STEPS batch for the point Greeks and ladders; one default-step
-    # batch for the theta chart (40 points, today being the headline price, plus
-    # the next-day row for theta); and for the convertible a two-row
-    # default-step batch for vega. No batch reprices the curves.
+    # batch for the theta chart (TREE_THETA_POINTS - 1 points, today being the
+    # headline price, plus the next-day row for theta); and for the convertible
+    # a two-row default-step batch for vega. No batch reprices the curves.
+    theta_rows = api.TREE_THETA_POINTS
     if t in api.DEFAULT_STEP_VEGA:
-        assert sorted(sizes) == [2, 15, api.THETA_POINTS]
+        assert sorted(sizes) == sorted([2, 15, theta_rows])
     else:
-        assert sorted(sizes) == [17, api.THETA_POINTS]
+        assert sorted(sizes) == sorted([17, theta_rows])
 
 
 @pytest.mark.parametrize("t", list(CASES))
@@ -327,10 +332,11 @@ def test_theta_chart_today_point_is_the_headline(t, days):
         assert t == "sofr_future"
         return
     expiry_days = spec["expiry_years"] * 365
-    assert len(tp["days"]) == api.THETA_POINTS
+    n = _theta_points(t)
+    assert len(tp["days"]) == n
     assert tp["days"] == sorted(tp["days"])
     assert tp["days"][0] == 0 and tp["days"][-1] == pytest.approx(expiry_days)
-    assert tp["days"][api.THETA_POINTS // 2] == pytest.approx(expiry_days / 2)  # the labeled middle stays
+    assert tp["days"][n // 2] == pytest.approx(expiry_days / 2)  # the labeled middle stays
     today = [v for x, v in zip(tp["days"], tp["values"]) if x == r["inputs"]["days_passed"]]
     assert today == [r["price"]]  # exactly the headline, so the dot sits on the line
 

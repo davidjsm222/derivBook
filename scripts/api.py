@@ -90,6 +90,11 @@ DEFAULT_STEP_VEGA = ("convertible",)
 
 GRID_POINTS = 61                                   # levels on the value chart's x axis
 THETA_POINTS = 41                                  # points on the value-to-expiry path
+# The trees price every theta-chart point on the default-step tree (500 steps),
+# about 6 ms each in the browser, so they get fewer: one every twelfth of the
+# life, which keeps a spot move on the convertible near 135 ms instead of 300.
+# Odd, so the chart's labeled middle point sits at half the life.
+TREE_THETA_POINTS = 13
 SPOT_RANGE = {"convertible": 0.50}                 # chart range either side of setup spot
 DEFAULT_SPOT_RANGE = 0.30
 SOFR_RATE_TOP = 0.08                               # SOFR chart: 0% to the larger of 8% and twice the setup rate
@@ -553,12 +558,12 @@ def _point_greeks(s, market):
     }
 
 
-def _path_times(expiry, t_now):
-    # THETA_POINTS times from day 0 to expiry, with today's time in place of the
-    # nearest one so the chart's today dot is a point on its line. Both ends
-    # (day 0 and expiry) and the middle point, which the chart labels, stay put;
-    # the count doesn't change.
-    n = THETA_POINTS - 1
+def _path_times(expiry, t_now, points):
+    # points evenly spaced times from day 0 to expiry, with today's time in
+    # place of the nearest one so the chart's today dot is a point on its line.
+    # Both ends (day 0 and expiry) and the middle point, which the chart labels,
+    # stay put; the count doesn't change.
+    n = points - 1
     times = [expiry * i / n for i in range(n + 1)]
     if t_now <= 0 or t_now >= expiry or t_now in times:
         return times
@@ -575,12 +580,13 @@ def _theta_path(s, market, price):
     # expiry, with only time moving. Today's point is the headline price itself.
     # For the trees every other point is priced on the same default-step tree as
     # the headline, in one batch that also holds the row for the headline theta,
-    # V(t + 1/365) - V(t). Returns (path, tree theta or None).
+    # V(t + 1/365) - V(t). The trees have TREE_THETA_POINTS points, the others
+    # THETA_POINTS. Returns (path, tree theta or None).
     if "time" not in s.applies:
         return None, None
     d = s.full if s.tree else s.curve
     t_now = market.time
-    times = _path_times(d.expiry, t_now)
+    times = _path_times(d.expiry, t_now, TREE_THETA_POINTS if s.tree else THETA_POINTS)
     rows = [market.set("time", t) for t in times if t != t_now]
     if s.tree:
         rows.append(market.bump("time", 1 / DAYS_PER_YEAR))
@@ -634,7 +640,7 @@ def explore(spec, base, now=None):
                                  the trees each level repriced at S*exp(+/-h) (None for SOFR)
       greeks         delta, gamma, theta per day, vega per vol point, rho per bp
       theta_path     {days, values}: value at this spot from day 0 to expiry,
-                     with today as one of its points
+                     with today as one of its points (41 points, 13 for the trees)
       vega_ladder, rho_ladder    [{shift, change}] against price
     """
     s = _Setup(spec, base)
